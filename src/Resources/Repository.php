@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Polyscope\Laravel\Resources;
 
+use RuntimeException;
+
 class Repository extends Resource
 {
     public ?string $id = null;
@@ -38,4 +40,42 @@ class Repository extends Resource
     public ?string $createdAt = null;
 
     public ?string $serverId = null;
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    public function createWorkspace(array $data = []): Workspace
+    {
+        $repositoryId = $this->id();
+
+        if (
+            isset($data['repository_id'])
+            && is_string($data['repository_id'])
+            && $data['repository_id'] !== $repositoryId
+        ) {
+            throw new RuntimeException('The provided repository_id does not match this repository resource.');
+        }
+
+        $data['repository_id'] = $repositoryId;
+
+        return $this->client()->createWorkspace($data);
+    }
+
+    protected function client(): \Polyscope\Laravel\Polyscope
+    {
+        if ($this->polyscope === null) {
+            throw new RuntimeException('No Polyscope client instance available for this resource.');
+        }
+
+        return $this->polyscope;
+    }
+
+    protected function id(): string
+    {
+        if ($this->id === null || $this->id === '') {
+            throw new RuntimeException('Repository ID is missing from resource payload.');
+        }
+
+        return $this->id;
+    }
 }

@@ -18,6 +18,12 @@ $polyscope = new Polyscope('your-api-token');
 $servers = $polyscope->servers();
 $repositories = $polyscope->repositories();
 $workspaces = $polyscope->workspaces();
+
+// Create a workspace directly from a repository resource.
+$workspace = $repositories[0]->createWorkspace([
+    'prompt' => 'Fix the login flow',
+    'server_id' => 'srv-1', // optional
+]);
 ```
 
 If no token is passed, the SDK automatically falls back to Polyscope's local settings file and reads `authToken`.

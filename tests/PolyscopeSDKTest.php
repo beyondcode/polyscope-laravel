@@ -18,6 +18,7 @@ use Polyscope\Laravel\Resources\Server;
 use Polyscope\Laravel\Resources\Workspace;
 use Polyscope\Laravel\Resources\WorkspaceDiff;
 use Polyscope\Laravel\Resources\WorkspaceMessages;
+use RuntimeException;
 
 class PolyscopeSDKTest extends TestCase
 {
@@ -203,6 +204,64 @@ class PolyscopeSDKTest extends TestCase
         $this->assertSame('main', $workspace->baseBranch);
         $this->assertSame('abc123', $workspace->baseCommit);
         $this->assertSame([], $workspace->linkedWorktreeIds);
+    }
+
+    public function test_repository_resource_can_create_workspace_without_manual_repository_id(): void
+    {
+        $sdk = new Polyscope('token', $http = Mockery::mock(Client::class));
+
+        $http->shouldReceive('request')
+            ->once()
+            ->with('POST', 'v1/workspaces', [
+                'timeout' => 30,
+                'json' => [
+                    'prompt' => 'Fix bug',
+                    'server_id' => 'srv-1',
+                    'repository_id' => 'repo-1',
+                ],
+            ])
+            ->andReturn(new Response(201, [], json_encode([
+                'data' => [
+                    'id' => 'wt-1',
+                    'repo_id' => 'repo-1',
+                    'branch' => 'fix-bug',
+                    'status' => 'active',
+                ],
+            ], JSON_THROW_ON_ERROR)));
+
+        $repository = new \Polyscope\Laravel\Resources\Repository([
+            'id' => 'repo-1',
+            'name' => 'polyscope',
+            'path' => '/code/polyscope',
+        ], $sdk);
+
+        $workspace = $repository->createWorkspace([
+            'prompt' => 'Fix bug',
+            'server_id' => 'srv-1',
+        ]);
+
+        $this->assertInstanceOf(Workspace::class, $workspace);
+        $this->assertSame('wt-1', $workspace->id);
+        $this->assertSame('repo-1', $workspace->repoId);
+    }
+
+    public function test_repository_resource_rejects_mismatched_repository_id_when_creating_workspace(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('The provided repository_id does not match this repository resource.');
+
+        $sdk = new Polyscope('token');
+
+        $repository = new \Polyscope\Laravel\Resources\Repository([
+            'id' => 'repo-1',
+            'name' => 'polyscope',
+            'path' => '/code/polyscope',
+        ], $sdk);
+
+        $repository->createWorkspace([
+            'repository_id' => 'repo-2',
+            'prompt' => 'Fix bug',
+        ]);
     }
 
     public function test_workspace_show_maps_nested_properties(): void
