@@ -245,6 +245,41 @@ class PolyscopeSDKTest extends TestCase
         $this->assertSame('repo-1', $workspace->repoId);
     }
 
+    public function test_repository_resource_can_create_workspace_from_prompt_string(): void
+    {
+        $sdk = new Polyscope('token', $http = Mockery::mock(Client::class));
+
+        $http->shouldReceive('request')
+            ->once()
+            ->with('POST', 'v1/workspaces', [
+                'timeout' => 30,
+                'json' => [
+                    'prompt' => 'Fix bug',
+                    'repository_id' => 'repo-1',
+                ],
+            ])
+            ->andReturn(new Response(201, [], json_encode([
+                'data' => [
+                    'id' => 'wt-1',
+                    'repo_id' => 'repo-1',
+                    'branch' => 'fix-bug',
+                    'status' => 'active',
+                ],
+            ], JSON_THROW_ON_ERROR)));
+
+        $repository = new \Polyscope\Laravel\Resources\Repository([
+            'id' => 'repo-1',
+            'name' => 'polyscope',
+            'path' => '/code/polyscope',
+        ], $sdk);
+
+        $workspace = $repository->createWorkspace('Fix bug');
+
+        $this->assertInstanceOf(Workspace::class, $workspace);
+        $this->assertSame('wt-1', $workspace->id);
+        $this->assertSame('repo-1', $workspace->repoId);
+    }
+
     public function test_repository_resource_rejects_mismatched_repository_id_when_creating_workspace(): void
     {
         $this->expectException(RuntimeException::class);

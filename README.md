@@ -24,6 +24,9 @@ $workspace = $repositories[0]->createWorkspace([
     'prompt' => 'Fix the login flow',
     'server_id' => 'srv-1', // optional
 ]);
+
+// Or use a prompt string shorthand.
+$workspace = $repositories[0]->createWorkspace('Fix the login flow');
 ```
 
 If no token is passed, the SDK automatically falls back to Polyscope's local settings file and reads `authToken`.

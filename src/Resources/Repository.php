@@ -42,10 +42,14 @@ class Repository extends Resource
     public ?string $serverId = null;
 
     /**
-     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>|string  $data
      */
-    public function createWorkspace(array $data = []): Workspace
+    public function createWorkspace(array|string $data = []): Workspace
     {
+        if (is_string($data)) {
+            $data = ['prompt' => $data];
+        }
+
         $repositoryId = $this->id();
 
         if (
