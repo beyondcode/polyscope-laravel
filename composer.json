@@ -1,0 +1,50 @@
+{
+    "name": "beyondcode/polyscope",
+    "description": "Laravel SDK for the Polyscope API.",
+    "keywords": ["laravel", "polyscope", "sdk"],
+    "license": "MIT",
+    "support": {
+        "issues": "https://github.com/beyondcode/polyscope/issues",
+        "source": "https://github.com/beyondcode/polyscope"
+    },
+    "authors": [
+        {
+            "name": "Marcel Pociot"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "ext-json": "*",
+        "guzzlehttp/guzzle": "^7.8"
+    },
+    "require-dev": {
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "mockery/mockery": "^1.6",
+        "phpstan/phpstan": "^1.11",
+        "phpunit/phpunit": "^10.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Polyscope\\Laravel\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit --configuration=phpunit.xml.dist",
+        "analyse": "phpstan analyse --configuration=phpstan.neon.dist"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Polyscope\\Laravel\\PolyscopeServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
