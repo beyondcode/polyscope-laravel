@@ -8,4 +8,4 @@ Documentation for the Polyscope Laravel SDK can be found on the [Polyscope websi
 
 ## License
 
-Laravel Boost is open-sourced software licensed under the [MIT license](LICENSE.md).
+Polyscope Laravel is open-sourced software licensed under the [MIT license](LICENSE.md).
