@@ -11,8 +11,10 @@ use PHPUnit\Framework\TestCase;
 use Polyscope\Laravel\Exceptions\ServerOfflineException;
 use Polyscope\Laravel\Exceptions\ValidationException;
 use Polyscope\Laravel\Polyscope;
+use Polyscope\Laravel\Resources\AvailableAgent;
 use Polyscope\Laravel\Resources\DiffSnapshot;
 use Polyscope\Laravel\Resources\GenericResource;
+use Polyscope\Laravel\Resources\ServerModels;
 use Polyscope\Laravel\Resources\Message;
 use Polyscope\Laravel\Resources\Server;
 use Polyscope\Laravel\Resources\Workspace;
@@ -149,6 +151,137 @@ class PolyscopeSDKTest extends TestCase
         $this->assertTrue($repositories[0]->hasRemote);
         $this->assertSame(['repo-2'], $repositories[0]->linkedRepoIds);
         $this->assertSame('srv-1', $repositories[0]->serverId);
+    }
+
+    public function test_models_are_transformed_to_server_models_resources(): void
+    {
+        $sdk = new Polyscope('token', $http = Mockery::mock(Client::class));
+
+        $http->shouldReceive('request')
+            ->once()
+            ->with('GET', 'v1/models', [
+                'timeout' => 30,
+            ])
+            ->andReturn(new Response(200, [], json_encode([
+                'data' => [[
+                    'server_id' => 'srv-1',
+                    'agents' => [
+                        [
+                            'id' => 'claude',
+                            'name' => 'Claude',
+                            'models' => ['claude-opus-5', 'claude-sonnet-5'],
+                        ],
+                        [
+                            'id' => 'codex',
+                            'name' => 'Codex',
+                            'models' => ['gpt-5.3-codex'],
+                        ],
+                    ],
+                    'models' => ['claude-opus-5', 'claude-sonnet-5', 'gpt-5.3-codex'],
+                    'model_capabilities' => [
+                        [
+                            'value' => 'claude-opus-5',
+                            'displayName' => 'Opus 5',
+                            'supportsFastMode' => true,
+                        ],
+                    ],
+                ]],
+            ], JSON_THROW_ON_ERROR)));
+
+        $serverModels = $sdk->models();
+
+        $this->assertCount(1, $serverModels);
+        $this->assertInstanceOf(ServerModels::class, $serverModels[0]);
+        $this->assertSame('srv-1', $serverModels[0]->serverId);
+        $this->assertCount(2, $serverModels[0]->agents);
+        $this->assertInstanceOf(AvailableAgent::class, $serverModels[0]->agents[0]);
+        $this->assertSame('claude', $serverModels[0]->agents[0]->id);
+        $this->assertSame('Claude', $serverModels[0]->agents[0]->name);
+        $this->assertSame(['claude-opus-5', 'claude-sonnet-5'], $serverModels[0]->agents[0]->models);
+        $this->assertSame(['claude-opus-5', 'claude-sonnet-5', 'gpt-5.3-codex'], $serverModels[0]->models);
+        $this->assertSame('claude-opus-5', $serverModels[0]->modelCapabilities[0]['value']);
+        $this->assertTrue($serverModels[0]->modelCapabilities[0]['supportsFastMode']);
+    }
+
+    public function test_models_support_server_filter(): void
+    {
+        $sdk = new Polyscope('token', $http = Mockery::mock(Client::class));
+
+        $http->shouldReceive('request')
+            ->once()
+            ->with('GET', 'v1/models', Mockery::on(function (array $options): bool {
+                return ($options['timeout'] ?? null) === 30
+                    && ($options['query']['server_id'] ?? null) === 'srv-1';
+            }))
+            ->andReturn(new Response(200, [], json_encode([
+                'data' => [[
+                    'server_id' => 'srv-1',
+                    'agents' => [],
+                    'models' => [],
+                    'model_capabilities' => [],
+                ]],
+            ], JSON_THROW_ON_ERROR)));
+
+        $serverModels = $sdk->models('srv-1');
+
+        $this->assertCount(1, $serverModels);
+        $this->assertSame('srv-1', $serverModels[0]->serverId);
+        $this->assertSame([], $serverModels[0]->agents);
+        $this->assertSame([], $serverModels[0]->modelCapabilities);
+    }
+
+    public function test_creating_workspace_from_linear_issue_sends_linear_issue_url(): void
+    {
+        $sdk = new Polyscope('token', $http = Mockery::mock(Client::class));
+
+        $http->shouldReceive('request')
+            ->once()
+            ->with('POST', 'v1/workspaces', [
+                'timeout' => 30,
+                'json' => [
+                    'repository_id' => 'repo-1',
+                    'linear_issue_url' => 'https://linear.app/team/issue/ABC-1',
+                ],
+            ])
+            ->andReturn(new Response(201, [], json_encode([
+                'data' => [
+                    'id' => 'wt-1',
+                    'repo_id' => 'repo-1',
+                    'branch' => 'abc-1',
+                    'status' => 'active',
+                ],
+            ], JSON_THROW_ON_ERROR)));
+
+        $workspace = $sdk->createWorkspaceFromLinearIssue('repo-1', 'https://linear.app/team/issue/ABC-1');
+
+        $this->assertInstanceOf(Workspace::class, $workspace);
+        $this->assertSame('wt-1', $workspace->id);
+    }
+
+    public function test_inviting_team_member_returns_generic_resource(): void
+    {
+        $sdk = new Polyscope('token', $http = Mockery::mock(Client::class));
+
+        $http->shouldReceive('request')
+            ->once()
+            ->with('POST', 'v1/team/invites', [
+                'timeout' => 30,
+                'json' => [
+                    'email' => 'teammate@example.com',
+                ],
+            ])
+            ->andReturn(new Response(201, [], json_encode([
+                'data' => [
+                    'email' => 'teammate@example.com',
+                    'invited' => true,
+                ],
+            ], JSON_THROW_ON_ERROR)));
+
+        $result = $sdk->inviteTeamMember('teammate@example.com');
+
+        $this->assertInstanceOf(GenericResource::class, $result);
+        $this->assertSame('teammate@example.com', $result->email);
+        $this->assertTrue($result->invited);
     }
 
     public function test_creating_workspace_returns_workspace_resource(): void

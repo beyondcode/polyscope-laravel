@@ -8,8 +8,10 @@ use GuzzleHttp\Client as HttpClient;
 
 class Polyscope
 {
+    use Actions\ManagesModels;
     use Actions\ManagesRepositories;
     use Actions\ManagesServers;
+    use Actions\ManagesTeam;
     use Actions\ManagesWorkspaceActions;
     use Actions\ManagesWorkspaceMessages;
     use Actions\ManagesWorkspaces;
