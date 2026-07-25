@@ -51,6 +51,15 @@ trait ManagesWorkspaces
         ]);
     }
 
+    public function createWorkspaceFromLinearIssue(string $repositoryId, string $linearIssueUrl, ?string $serverId = null): Workspace
+    {
+        return $this->createWorkspace([
+            'repository_id' => $repositoryId,
+            'linear_issue_url' => $linearIssueUrl,
+            'server_id' => $serverId,
+        ]);
+    }
+
     public function createWorkspaceFromPullRequest(string $repositoryId, string $pullRequestUrl, ?string $serverId = null): Workspace
     {
         return $this->createWorkspace([
