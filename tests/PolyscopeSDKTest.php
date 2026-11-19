@@ -151,6 +151,38 @@ class PolyscopeSDKTest extends TestCase
         $this->assertSame('srv-1', $repositories[0]->serverId);
     }
 
+    public function test_listing_workspaces_maps_url(): void
+    {
+        $sdk = new Polyscope('token', $http = Mockery::mock(Client::class));
+
+        $http->shouldReceive('request')
+            ->once()
+            ->with('GET', 'v1/workspaces', Mockery::on(function (array $options): bool {
+                return ($options['timeout'] ?? null) === 30
+                    && ($options['query']['server_id'] ?? null) === 'srv-1';
+            }))
+            ->andReturn(new Response(200, [], json_encode([
+                'data' => [
+                    [
+                        'id' => 'wt-1',
+                        'server_id' => 'srv-1',
+                        'url' => 'https://getpolyscope.com/servers/srv-1/session?workspace=wt-1',
+                    ],
+                    [
+                        'id' => 'wt-2',
+                        'server_id' => 'srv-1',
+                    ],
+                ],
+            ], JSON_THROW_ON_ERROR)));
+
+        $workspaces = $sdk->workspaces(['server_id' => 'srv-1']);
+
+        $this->assertCount(2, $workspaces);
+        $this->assertInstanceOf(Workspace::class, $workspaces[0]);
+        $this->assertSame('https://getpolyscope.com/servers/srv-1/session?workspace=wt-1', $workspaces[0]->url);
+        $this->assertNull($workspaces[1]->url);
+    }
+
     public function test_creating_workspace_returns_workspace_resource(): void
     {
         $sdk = new Polyscope('token', $http = Mockery::mock(Client::class));
@@ -169,6 +201,7 @@ class PolyscopeSDKTest extends TestCase
                     'id' => 'wt-1',
                     'repo_id' => 'repo-1',
                     'server_id' => 'srv-1',
+                    'url' => 'https://getpolyscope.com/servers/srv-1/session?workspace=wt-1',
                     'branch' => 'fix-bug',
                     'branch_renamed' => false,
                     'path' => '/code/polyscope/.polyscope/worktrees/fix-bug',
@@ -198,6 +231,7 @@ class PolyscopeSDKTest extends TestCase
         $this->assertSame('wt-1', $workspace->id);
         $this->assertSame('repo-1', $workspace->repoId);
         $this->assertSame('srv-1', $workspace->serverId);
+        $this->assertSame('https://getpolyscope.com/servers/srv-1/session?workspace=wt-1', $workspace->url);
         $this->assertSame('fix-bug', $workspace->branch);
         $this->assertFalse($workspace->branchRenamed);
         $this->assertSame('/code/polyscope/.polyscope/worktrees/fix-bug', $workspace->path);
@@ -313,6 +347,7 @@ class PolyscopeSDKTest extends TestCase
                     'id' => 'wt-1',
                     'repo_id' => 'repo-1',
                     'server_id' => 'srv-1',
+                    'url' => 'https://getpolyscope.com/servers/srv-1/session?workspace=wt-1',
                     'branch' => 'fix-bug',
                     'branch_renamed' => true,
                     'path' => '/code/polyscope/.polyscope/worktrees/fix-bug',
@@ -349,6 +384,7 @@ class PolyscopeSDKTest extends TestCase
         $this->assertSame('wt-1', $workspace->id);
         $this->assertSame('repo-1', $workspace->repoId);
         $this->assertSame('srv-1', $workspace->serverId);
+        $this->assertSame('https://getpolyscope.com/servers/srv-1/session?workspace=wt-1', $workspace->url);
         $this->assertTrue($workspace->branchRenamed);
         $this->assertSame(12, $workspace->prNumber);
         $this->assertSame('https://github.com/beyondcode/polyscope/pull/12', $workspace->prUrl);
