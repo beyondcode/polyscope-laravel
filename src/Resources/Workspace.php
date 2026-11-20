@@ -14,6 +14,8 @@ class Workspace extends Resource
 
     public ?string $serverId = null;
 
+    public ?string $url = null;
+
     public ?string $branch = null;
 
     public bool $branchRenamed = false;
